@@ -44,3 +44,8 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# AI Tooling
+.claude/
+.cursor/
+plans/
