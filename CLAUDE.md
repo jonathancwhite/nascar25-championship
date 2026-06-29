@@ -73,6 +73,17 @@ When the work is done **and** the PR is created, in `C:\Users\JCLW\Desktop\produ
 
 A card only moves to **In Review** once both are true: the story is complete and a PR exists. After the PR merges, move the card to `## Done`.
 
+### After the PR merges
+
+Move the card to `## Done`, then sync local git and prune the merged remote branch:
+
+```bash
+git fetch --prune
+git checkout main && git pull
+```
+
+`git fetch --prune` removes the stale remote-tracking ref for the merged feature branch.
+
 ## Notes
 
 - Story IDs: the board (`tasks.md`) uses `NSC-0XX`; the spec files in `plans/` use `NASCAR-0XX`. Same number = same story.
