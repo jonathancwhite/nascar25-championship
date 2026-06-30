@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import type { WebhookEvent } from "@clerk/nextjs/server";
 
 import { serverEnv } from "@/lib/env";
+import { captureError, log } from "@/lib/logger";
 import {
   anonymizeUserByClerkId,
   mapWebhookUser,
@@ -37,21 +38,28 @@ export async function POST(req: Request) {
     return new Response("Invalid signature", { status: 400 });
   }
 
-  switch (event.type) {
-    case "user.created":
-    case "user.updated":
-      await upsertLocalUser(mapWebhookUser(event.data));
-      break;
-    case "user.deleted":
-      // `data.id` is optional on the deleted payload; skip if absent.
-      if (event.data.id) {
-        await anonymizeUserByClerkId(event.data.id);
-      }
-      break;
-    default:
-      // Other event types are intentionally ignored.
-      break;
+  try {
+    switch (event.type) {
+      case "user.created":
+      case "user.updated":
+        await upsertLocalUser(mapWebhookUser(event.data));
+        break;
+      case "user.deleted":
+        // `data.id` is optional on the deleted payload; skip if absent.
+        if (event.data.id) {
+          await anonymizeUserByClerkId(event.data.id);
+        }
+        break;
+      default:
+        // Other event types are intentionally ignored.
+        break;
+    }
+  } catch (error) {
+    // Surface to the tracker; 500 tells Clerk to retry the delivery.
+    captureError(error, { event: "webhook.clerk", type: event.type });
+    return new Response("Processing error", { status: 500 });
   }
 
+  log.info("webhook.clerk_processed", { type: event.type });
   return new Response("ok", { status: 200 });
 }

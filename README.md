@@ -78,6 +78,21 @@ Transactional email runs on [Resend](https://resend.com) with
   `EMAIL_UNSUBSCRIBE_SECRET`) that sets the member's `notifyByEmail` to false.
   Senders skip opted-out members via `getNotifiableMembers`.
 
-## Status
+## Continuous integration
 
-Planning. See the implementation plan before building.
+`.github/workflows/ci.yml` runs on every PR and on push to `main`: install →
+`prisma validate` → `prisma generate` → `tsc --noEmit` → ESLint → unit tests →
+`next build`. The build uses dummy env values (the app's DB/auth pages are
+`force-dynamic`, so CI never contacts a real database, Clerk, or Resend).
+
+**Branch protection:** in GitHub → Settings → Branches, protect `main` and mark
+the **CI / Quality gates** check as required, so a red build blocks merge. When
+DB-backed integration tests are added, give the workflow a `services: postgres`
+container and run migrations + seed against it before the test step.
+
+## Deployment
+
+The app targets Vercel (Postgres + Clerk + Resend + Vercel Cron). See
+[`DEPLOYMENT.md`](./DEPLOYMENT.md) for the full runbook: env vars, database
+pooling + migrations on deploy, production Clerk/Resend setup, the reminder
+cron, and a go-live verification checklist.
