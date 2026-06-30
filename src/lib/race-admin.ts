@@ -6,7 +6,10 @@
 
 import { RaceStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
-import { notifyRaceScheduled } from "@/lib/race-notifications";
+import {
+  notifyRaceCancelled,
+  notifyRaceScheduled,
+} from "@/lib/race-notifications";
 import { zonedWallTimeToUtc } from "@/lib/timezone";
 
 export type SetRaceDateResult =
@@ -58,4 +61,66 @@ export async function setRaceDate(
   }
 
   return { ok: true, raceId, scheduledAt };
+}
+
+export type RaceStatusChangeResult =
+  { ok: true } | { ok: false; error: string };
+
+/**
+ * Cancel a SCHEDULED race (NASCAR-054), keeping its date for the record, and
+ * notify members (with an optional reason). A cancelled race is already excluded
+ * from standings (COMPLETED-only) and reminders (SCHEDULED-only).
+ */
+export async function cancelRace(
+  leagueId: string,
+  raceId: string,
+  reason: string | null,
+): Promise<RaceStatusChangeResult> {
+  const race = await prisma.race.findFirst({
+    where: { id: raceId, leagueId },
+    select: { status: true },
+  });
+  if (!race) return { ok: false, error: "Race not found in this league." };
+  if (race.status !== RaceStatus.SCHEDULED) {
+    return { ok: false, error: "Only a scheduled race can be cancelled." };
+  }
+
+  await prisma.race.update({
+    where: { id: raceId },
+    data: { status: RaceStatus.CANCELLED },
+  });
+
+  const trimmed = reason?.trim() ? reason.trim() : null;
+  try {
+    await notifyRaceCancelled(raceId, trimmed);
+  } catch (error) {
+    console.error(`[cancelRace] notification failed for ${raceId}:`, error);
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Reinstate a CANCELLED race back to SCHEDULED (NASCAR-054), clearing its date so
+ * the admin re-dates it (which sends a fresh "scheduled" notice). No email on
+ * reinstatement itself.
+ */
+export async function reinstateRace(
+  leagueId: string,
+  raceId: string,
+): Promise<RaceStatusChangeResult> {
+  const race = await prisma.race.findFirst({
+    where: { id: raceId, leagueId },
+    select: { status: true },
+  });
+  if (!race) return { ok: false, error: "Race not found in this league." };
+  if (race.status !== RaceStatus.CANCELLED) {
+    return { ok: false, error: "Only a cancelled race can be reinstated." };
+  }
+
+  await prisma.race.update({
+    where: { id: raceId },
+    data: { status: RaceStatus.SCHEDULED, scheduledAt: null },
+  });
+  return { ok: true };
 }

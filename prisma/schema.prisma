@@ -39,6 +39,7 @@ enum EmailType {
   RACE_SCHEDULED
   RACE_REMINDER
   LEAGUE_INVITE
+  RACE_CANCELLED
 }
 
 // ---------------------------------------------------------------------------

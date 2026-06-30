@@ -17,7 +17,12 @@ import {
 import type { ManageScheduleRound, TrackOption } from "@/lib/league-queries";
 import { cn } from "@/lib/utils";
 
-import { setRaceDateAction, swapTrackAction } from "./actions";
+import {
+  cancelRaceAction,
+  reinstateRaceAction,
+  setRaceDateAction,
+  swapTrackAction,
+} from "./actions";
 
 const SELECT_CLASS =
   "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm transition-colors outline-none focus-visible:ring-3";
@@ -142,7 +147,53 @@ export function ScheduleManager({
                 )}
               </TableCell>
               <TableCell>
-                <RaceStatusBadge status={round.status} />
+                <div className="flex flex-col items-start gap-1.5">
+                  <RaceStatusBadge status={round.status} />
+                  {round.status === "SCHEDULED" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      className="text-destructive hover:text-destructive h-auto px-0 py-0 text-xs"
+                      onClick={() => {
+                        const reason = window.prompt(
+                          `Cancel round ${round.round} (${round.trackName})? Members will be notified. Optional reason:`,
+                        );
+                        // prompt returns null when the admin dismisses it.
+                        if (reason === null) return;
+                        run(() =>
+                          cancelRaceAction(
+                            leagueId,
+                            round.raceId,
+                            reason.trim() || null,
+                          ),
+                        );
+                      }}
+                    >
+                      Cancel race
+                    </Button>
+                  ) : null}
+                  {round.status === "CANCELLED" ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      className="h-auto px-0 py-0 text-xs"
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `Reinstate round ${round.round}? It returns to scheduled with no date — re-date it to notify members.`,
+                          )
+                        ) {
+                          return;
+                        }
+                        run(() => reinstateRaceAction(leagueId, round.raceId));
+                      }}
+                    >
+                      Reinstate
+                    </Button>
+                  ) : null}
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 {!round.canSwap ? (

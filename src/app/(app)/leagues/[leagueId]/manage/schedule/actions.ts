@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { LeagueRole } from "@/generated/prisma/enums";
 import { requireLeagueRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { setRaceDate } from "@/lib/race-admin";
+import { cancelRace, reinstateRace, setRaceDate } from "@/lib/race-admin";
 import { swapTrack } from "@/lib/schedule";
 
 export type SwapState = { ok?: boolean; error?: string };
@@ -33,6 +33,47 @@ export async function setRaceDateAction(
   }
 
   const result = await setRaceDate(leagueId, raceId, wallClock);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath(`/leagues/${leagueId}/manage/schedule`);
+  revalidatePath(`/leagues/${leagueId}/races/${raceId}`);
+  return { ok: true };
+}
+
+function denyReason(reason: "unauthenticated" | string): string {
+  return reason === "unauthenticated"
+    ? "You must be signed in."
+    : "Only admins can change the schedule.";
+}
+
+/** Cancel a scheduled race (NASCAR-054). Members are notified. */
+export async function cancelRaceAction(
+  leagueId: string,
+  raceId: string,
+  reason: string | null,
+): Promise<DateState> {
+  const authz = await requireLeagueRole(leagueId, LeagueRole.ADMIN);
+  if (!authz.ok) return { error: denyReason(authz.reason) };
+
+  const result = await cancelRace(leagueId, raceId, reason);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath(`/leagues/${leagueId}/manage/schedule`);
+  revalidatePath(`/leagues/${leagueId}/races/${raceId}`);
+  return { ok: true };
+}
+
+/** Reinstate a cancelled race back to scheduled, cleared to TBD (NASCAR-054). */
+export async function reinstateRaceAction(
+  leagueId: string,
+  raceId: string,
+): Promise<DateState> {
+  const authz = await requireLeagueRole(leagueId, LeagueRole.ADMIN);
+  if (!authz.ok) return { error: denyReason(authz.reason) };
+
+  const result = await reinstateRace(leagueId, raceId);
   if (!result.ok) return { error: result.error };
 
   revalidatePath(`/leagues/${leagueId}`);
