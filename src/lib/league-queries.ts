@@ -277,6 +277,38 @@ export async function getLeagueStandings(
   };
 }
 
+export type NotifiableMember = {
+  membershipId: string;
+  userId: string;
+  email: string;
+};
+
+/**
+ * Members of a league who have NOT opted out of email (NASCAR-053). The single
+ * source of eligible recipients — notification senders (NASCAR-051/052) call
+ * this so suppressed members are skipped uniformly.
+ */
+export async function getNotifiableMembers(
+  leagueId: string,
+): Promise<NotifiableMember[]> {
+  const memberships = await prisma.leagueMembership.findMany({
+    where: { leagueId, notifyByEmail: true },
+    select: {
+      id: true,
+      userId: true,
+      user: { select: { email: true } },
+    },
+  });
+
+  return memberships
+    .filter((m) => !m.user.email.endsWith("@no-email.invalid"))
+    .map((m) => ({
+      membershipId: m.id,
+      userId: m.userId,
+      email: m.user.email,
+    }));
+}
+
 export type LeagueSettings = {
   id: string;
   name: string;

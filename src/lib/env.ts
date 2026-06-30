@@ -33,6 +33,9 @@ const serverSchema = z.object({
   EMAIL_FROM: z.string().min(1),
   // High-entropy shared secret guarding the reminder cron route (NASCAR-052).
   CRON_SECRET: z.string().min(1),
+  // Secret for signing token-based email unsubscribe links (NASCAR-053). Lets
+  // the opt-out page authenticate the request without a logged-in session.
+  EMAIL_UNSUBSCRIBE_SECRET: z.string().min(1),
 });
 
 const clientSchema = z.object({

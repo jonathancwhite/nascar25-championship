@@ -45,6 +45,7 @@ All variables live in `.env` (gitignored; never commit real secrets). See
 | `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` / `..._SIGN_UP_FALLBACK_REDIRECT_URL` | recommended | Where to land after auth, e.g. `/dashboard`.                                                              |
 | `RESEND_API_KEY`                                                                        | yes         | Resend Dashboard → API Keys.                                                                              |
 | `EMAIL_FROM`                                                                            | yes         | A verified sender on your Resend domain, e.g. `NASCAR 25 <noreply@yourdomain.com>`.                       |
+| `EMAIL_UNSUBSCRIBE_SECRET`                                                              | yes         | Generate a high-entropy string: `openssl rand -hex 32`. Signs email unsubscribe links.                    |
 | `CRON_SECRET`                                                                           | yes         | Generate a high-entropy string: `openssl rand -hex 32`.                                                   |
 | `NEXT_PUBLIC_APP_URL`                                                                   | yes         | Public origin, no trailing slash. Local: `http://localhost:3000`.                                         |
 
@@ -55,6 +56,27 @@ the environments that need it (Production / Preview / Development). Use the
 provider's pooled string for `DATABASE_URL` on Vercel, and set `NEXT_PUBLIC_APP_URL`
 to the deployment's public URL. Redeploy after changing values — Vercel injects
 env vars at build and runtime, so the boot-time validation runs on every deploy.
+
+## Email
+
+Transactional email runs on [Resend](https://resend.com) with
+[React Email](https://react.email) templates.
+
+- **Templates** live in `src/emails/` (shared branded layout in
+  `components/email-layout.tsx`): league invite, race scheduled, race reminder.
+- **Preview** them locally with the React Email dev server:
+  ```bash
+  npx react-email dev --dir src/emails
+  ```
+  Each template has a default export with sample props so it renders standalone.
+- **Sending** goes through `src/lib/email.ts` (`sendEmail` + the `EmailLog`
+  dedupe helper). `EMAIL_FROM` must be a sender on a **verified domain** in
+  Resend — add the domain in the Resend dashboard and publish the **SPF** and
+  **DKIM** DNS records it gives you, or delivery will fail / land in spam.
+- **Unsubscribe** is per-league: notification emails include a signed,
+  no-login opt-out link (`/unsubscribe?token=…`, signed with
+  `EMAIL_UNSUBSCRIBE_SECRET`) that sets the member's `notifyByEmail` to false.
+  Senders skip opted-out members via `getNotifiableMembers`.
 
 ## Status
 

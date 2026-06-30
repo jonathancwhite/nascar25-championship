@@ -22,7 +22,10 @@ import {
 import { getOrCreateCurrentUser } from "@/lib/auth";
 import { getLeagueOverview } from "@/lib/league-queries";
 import { leagueStatusLabel } from "@/lib/league-status";
+import { buildInviteUrl } from "@/lib/invites";
 import { SERIES_LABELS, type SeriesValue } from "@/lib/series";
+
+import { InvitePanel } from "./invite-panel";
 
 export const metadata: Metadata = {
   title: "League",
@@ -81,20 +84,22 @@ export default async function LeaguePage({
         ) : null}
       </div>
 
-      {/* Join code is an admin-only control (NASCAR-021). Member-facing invites
-          arrive with NASCAR-031. */}
+      {/* Admin-only invite controls (NASCAR-021/031): join code, shareable
+          link, and email invites. */}
       {isAdmin ? (
         <Card>
           <CardHeader>
             <CardTitle>Invite friends</CardTitle>
             <CardDescription>
-              Share this join code so friends can join your league.
+              Share the code or link, or email an invite directly.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted inline-flex items-center rounded-lg px-4 py-2 font-mono text-2xl font-semibold tracking-[0.3em]">
-              {league.joinCode}
-            </div>
+            <InvitePanel
+              leagueId={league.id}
+              joinCode={league.joinCode}
+              inviteUrl={buildInviteUrl(league.joinCode)}
+            />
           </CardContent>
         </Card>
       ) : null}
