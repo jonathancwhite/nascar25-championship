@@ -192,6 +192,18 @@ model RaceResult {
   participant RaceParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 }
 
+/// Observability record of a cron run (NASCAR-081), so the last run's status is
+/// queryable via the health endpoint.
+model CronRun {
+  id              String   @id @default(cuid())
+  job             String
+  ranAt           DateTime @default(now())
+  racesConsidered Int      @default(0)
+  remindersSent   Int      @default(0)
+
+  @@index([job, ranAt])
+}
+
 /// Send-once log for transactional email. dedupeKey enforces idempotency.
 model EmailLog {
   id        String    @id @default(cuid())

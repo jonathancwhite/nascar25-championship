@@ -9,6 +9,7 @@ import type { EmailType } from "@/generated/prisma/enums";
 import { clientEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/env";
 import { prisma } from "@/lib/db";
+import { captureError, log } from "@/lib/logger";
 import { signUnsubscribeToken } from "@/lib/unsubscribe";
 
 let client: Resend | null = null;
@@ -34,10 +35,21 @@ export async function sendEmail(args: {
       react: args.react,
     });
     if (error) {
+      // Subject carries league/round context but no PII; the recipient lives in
+      // EmailLog, not the structured logs.
+      log.warn("email.send_failed", {
+        subject: args.subject,
+        error: error.message,
+      });
       return { ok: false, error: error.message };
     }
+    log.info("email.sent", {
+      subject: args.subject,
+      resendId: data?.id ?? null,
+    });
     return { ok: true, id: data?.id ?? null };
   } catch (err) {
+    captureError(err, { event: "email.send", subject: args.subject });
     return {
       ok: false,
       error: err instanceof Error ? err.message : "Unknown email error",
