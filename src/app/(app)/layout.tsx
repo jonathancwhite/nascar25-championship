@@ -22,9 +22,15 @@ export default function AppLayout({
           </Link>
           {/* Sign-out lives in the UserButton menu; the post-sign-out
               destination is set via afterSignOutUrl on <ClerkProvider>. */}
-          <div className="ml-auto">
+          <nav className="ml-auto flex items-center gap-4">
+            <Link
+              href="/profile"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium"
+            >
+              My career
+            </Link>
             <UserButton />
-          </div>
+          </nav>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
