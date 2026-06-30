@@ -90,6 +90,9 @@ the **CI / Quality gates** check as required, so a red build blocks merge. When
 DB-backed integration tests are added, give the workflow a `services: postgres`
 container and run migrations + seed against it before the test step.
 
-## Status
+## Deployment
 
-Planning. See the implementation plan before building.
+The app targets Vercel (Postgres + Clerk + Resend + Vercel Cron). See
+[`DEPLOYMENT.md`](./DEPLOYMENT.md) for the full runbook: env vars, database
+pooling + migrations on deploy, production Clerk/Resend setup, the reminder
+cron, and a go-live verification checklist.
