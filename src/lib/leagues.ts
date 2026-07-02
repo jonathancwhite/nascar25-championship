@@ -424,3 +424,49 @@ export async function regenerateJoinCode(
     error: "Could not generate a new code. Please try again.",
   };
 }
+
+export type DeleteLeagueResult = { ok: true } | { ok: false; error: string };
+
+/** Maps auth failure reasons to user-facing copy for delete-league (NASCAR-087). */
+export function deleteLeagueDeniedMessage(
+  reason: "unauthenticated" | string,
+): string {
+  if (reason === "unauthenticated") return "You must be signed in.";
+  return "Only admins can delete this league.";
+}
+
+/** Server-side guard: typed confirmation must exactly match the league name. */
+export function isDeleteConfirmationValid(
+  typed: string,
+  leagueName: string,
+): boolean {
+  return typed.trim() === leagueName.trim();
+}
+
+/**
+ * Permanently delete a league and all dependent rows (NASCAR-087). Prisma
+ * cascades races, memberships, results, and email logs. Hard delete for v1;
+ * soft delete can be layered here later if needed. Authorization is the
+ * caller's responsibility (`requireLeagueRole` ADMIN).
+ */
+export async function deleteLeague(
+  leagueId: string,
+): Promise<DeleteLeagueResult> {
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { id: true, name: true, creatorId: true },
+  });
+  if (!league) {
+    return { ok: false, error: "League not found." };
+  }
+
+  await prisma.league.delete({ where: { id: leagueId } });
+
+  log.info("league.deleted", {
+    leagueId: league.id,
+    leagueName: league.name,
+    creatorId: league.creatorId,
+  });
+
+  return { ok: true };
+}
