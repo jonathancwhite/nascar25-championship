@@ -3,6 +3,7 @@ import { Flag } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
 import { DisplayNamePrompt } from "@/components/display-name-prompt";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getOrCreateCurrentUser } from "@/lib/auth";
 import { hasUsableDisplayName } from "@/lib/display-name";
 
@@ -38,6 +39,7 @@ export default async function AppLayout({
             >
               My career
             </Link>
+            <ThemeToggle />
             <UserButton />
           </nav>
         </div>
